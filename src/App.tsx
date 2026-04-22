@@ -28,19 +28,34 @@ const PAGE_TITLES: Record<Page, { title: string; subtitle?: string }> = {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [nav, setNav] = useState<NavState>({ page: 'dashboard' });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setAuthLoading(false);
-    });
+    const initAuth = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        setUser(session?.user ?? null);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Failed to initialize authentication';
+        console.error('Auth error:', errorMsg);
+        setError(errorMsg);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+    initAuth();
 
-    return () => subscription.unsubscribe();
+    try {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+      });
+      return () => subscription?.unsubscribe();
+    } catch (err) {
+      console.error('Auth subscription error:', err);
+    }
   }, []);
 
   const navigate = (page: Page, planId?: string, subjectId?: string) => {
@@ -53,6 +68,21 @@ export default function App() {
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-500 text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="mx-auto max-w-md p-6 bg-white rounded-lg shadow-lg">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">!</div>
+            <h2 className="font-semibold text-slate-900">Configuration Error</h2>
+          </div>
+          <p className="text-slate-600 text-sm mb-4">{error}</p>
+          <p className="text-slate-500 text-xs">Please ensure your Supabase credentials are configured in environment variables.</p>
         </div>
       </div>
     );
