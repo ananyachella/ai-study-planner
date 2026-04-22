@@ -1,3 +1,3 @@
-# ai-study-planner
+# Anaya - AI-Powered Study Planner
 
-[![Open in Bolt](https://bolt.new/static/open-in-bolt.svg)](https://bolt.new/~/sb1-gl4xfbsu)
+An intelligent study planning application powered by AI.
